@@ -34,6 +34,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check required Vercel secrets are present
+        env:
+          CHECK_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          CHECK_VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          CHECK_VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          fail=0
+          for entry in \
+            "CHECK_VERCEL_TOKEN:VERCEL_TOKEN" \
+            "CHECK_VERCEL_ORG_ID:VERCEL_ORG_ID" \
+            "CHECK_VERCEL_PROJECT_ID:VERCEL_PROJECT_ID"; do
+            var="${entry%%:*}"; name="${entry##*:}"
+            if [ -z "$(printenv "$var")" ]; then
+              echo "::error::GitHub secret '${name}' is missing or empty. Add it under Settings > Secrets and variables > Actions (repository secrets)."
+              fail=1
+            fi
+          done
+          exit $fail
+
       - name: Pull Vercel production project settings
         run: npx --yes vercel@latest pull --yes --environment=production --token "${{ secrets.VERCEL_TOKEN }}"
 
