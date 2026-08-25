@@ -1,0 +1,312 @@
+/* ---------------------------------------------------------------------------
+   Tailwind v4 (CSS-first) — theme + utilities only.
+   Preflight is intentionally NOT imported: under Next 16 Turbopack builds,
+   preflight's element selectors get chunked into next/font's generated
+   *.module.css and fail its pure-selector check. A minimal hand-written
+   reset below covers what this site actually needs.
+--------------------------------------------------------------------------- */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* ---------------------------------------------------------------------------
+   Design tokens — dark-only system.
+   background #0a0a0b · surface #131315 · line #232327
+   ink #f4f1ea · muted #a8a29e · accent #f59e0b (hover #fbbf24)
+--------------------------------------------------------------------------- */
+@theme {
+  --color-background: #0a0a0b;
+  --color-surface: #131315;
+  --color-line: #232327;
+  --color-ink: #f4f1ea;
+  --color-muted: #a8a29e;
+  --color-accent: #f59e0b;
+  --color-accent-strong: #fbbf24;
+
+  /* Body base: 17px with generous leading; spacing scale stays 16px-rooted */
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.7;
+  --text-lg--line-height: 1.6;
+
+  --tracking-display: -0.03em;
+}
+
+/* Font variables come from next/font/local at runtime, so map them inline */
+@theme inline {
+  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-clash), var(--font-satoshi), ui-sans-serif,
+    system-ui, sans-serif;
+}
+
+@layer base {
+  /* Minimal reset (preflight stand-in, scoped to what this site uses) */
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+    border: 0 solid;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  ul,
+  ol {
+    list-style: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+  }
+
+  b,
+  strong {
+    font-weight: 700;
+  }
+
+  /* --- Theme base ------------------------------------------------------- */
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-background);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  /* Page gutter + measure shared by every section */
+  .shell {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 72rem;
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .shell {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* Section label — the amber tick is the site's signature motif */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .eyebrow::before {
+    content: "";
+    display: block;
+    width: 1.5rem;
+    height: 2px;
+    background-color: var(--color-accent);
+  }
+
+  /* Highlighter bar under key words in display type */
+  .hl {
+    background-image: linear-gradient(
+      var(--color-accent),
+      var(--color-accent)
+    );
+    background-repeat: no-repeat;
+    background-size: 100% 0.14em;
+    background-position: 0 90%;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.75rem;
+    padding-inline: 1.5rem;
+    border-radius: 9999px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease,
+      color 200ms ease;
+  }
+
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-background);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-accent-strong);
+  }
+
+  .btn-outline {
+    border: 1px solid var(--color-line);
+    color: var(--color-ink);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* Inline text link (about copy, footer) */
+  .link {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: color 200ms ease;
+  }
+
+  .link:hover {
+    color: var(--color-accent-strong);
+  }
+
+  /* Skip link — off-canvas until keyboard-focused (WCAG 2.4.1) */
+  .skip-link {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 60; /* above the z-50 fixed header */
+    display: inline-flex;
+    align-items: center;
+    height: 2.75rem;
+    padding-inline: 1.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-accent);
+    color: var(--color-background);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transform: translateY(-200%);
+    transition: transform 200ms ease;
+  }
+
+  .skip-link:focus {
+    transform: none;
+  }
+
+  /* Stack chip */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-muted);
+  }
+
+  /* Contact form fields */
+  .field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .field-input {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 200ms ease;
+  }
+
+  .field-input:focus {
+    border-color: var(--color-accent);
+  }
+
+  .field-error {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-red-400);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Scroll reveal — fade + slight rise + blur-out.
+   Respects prefers-reduced-motion both here and in the Reveal component.
+--------------------------------------------------------------------------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  filter: blur(6px);
+  transition:
+    opacity 480ms ease,
+    transform 480ms ease,
+    filter 480ms ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}
