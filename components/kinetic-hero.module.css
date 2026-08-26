@@ -1,0 +1,32 @@
+/* ---------------------------------------------------------------------------
+   Kinetic hero — pre-hydration hidden states.
+
+   Each rule pairs a local class (required by Turbopack's pure-selector rule
+   for CSS Modules) with a stable data attribute. The attribute half is what
+   the <noscript> override rendered in app/page.tsx targets to clear these
+   states when scripting is unavailable (same contract as `.reveal` in
+   globals.css); the reduced-motion media query below renders everything
+   instantly as well.
+
+   GSAP takes over from these exact states at hydration, so there is no
+   flash between server HTML and the first animation frame.
+--------------------------------------------------------------------------- */
+
+/* Split headline characters rise from below their overflow-hidden line mask */
+.char[data-kh-char] {
+  transform: translate3d(0, 120%, 0);
+}
+
+/* Tagline + CTA row fade-rise as whole blocks */
+.fade[data-kh-fade] {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .char[data-kh-char],
+  .fade[data-kh-fade] {
+    opacity: 1;
+    transform: none;
+  }
+}

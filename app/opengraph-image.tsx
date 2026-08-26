@@ -7,7 +7,7 @@ export const size = {
 
 export const contentType = "image/png";
 
-export const alt = "Krishna Teja — Software Engineer";
+export const alt = "Krishna Teja — Backend Engineer";
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -51,7 +51,7 @@ export default function OpengraphImage() {
             marginTop: 20,
           }}
         >
-          Software Engineer
+          Backend Engineer
         </div>
         <div
           style={{
@@ -61,7 +61,7 @@ export default function OpengraphImage() {
             marginTop: 56,
           }}
         >
-          Building across data, AI, and devices.
+          Event-driven data platforms in Python on AWS.
         </div>
       </div>
     ),

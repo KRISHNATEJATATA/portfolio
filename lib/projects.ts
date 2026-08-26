@@ -1,3 +1,14 @@
+/**
+ * A project image. `alt` is required at the type level on purpose: an image
+ * without a meaningful description never ships (WCAG 1.1.1).
+ */
+export type ProjectImage = {
+  /** Path relative to public/, e.g. "/projects/aws-etl.webp". */
+  src: string;
+  /** What the image shows, in a sentence. Read by screen readers. */
+  alt: string;
+};
+
 export type Project = {
   slug: string;
   name: string;
@@ -8,20 +19,78 @@ export type Project = {
   sourceUrl: string;
   demoUrl: string | null;
   featured: boolean;
+
+  /* ------------------------------------------------------------------ */
+  /* Optional media + case-study fields.                                 */
+  /* Every field below is optional: existing entries need zero changes,  */
+  /* and the site renders a designed text-only treatment until they      */
+  /* exist. See public/projects/README.md for the drop-in convention.    */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Cover image. Overrides the public/projects/{slug} file convention.
+   * When omitted, lib/project-media.ts looks for /public/projects/{slug}
+   * .{webp,avif,jpg,jpeg,png} at build time and uses it automatically.
+   */
+  image?: ProjectImage;
+  /** The owner's role on the project, e.g. "Solo build". Shown near the title. */
+  role?: string;
+  /** The problem the project solves. Empty until the owner writes it. */
+  problem?: string[];
+  /**
+   * How it was built. When omitted, the detail page re-flows the tail of
+   * `description` into this section so nothing looks unfinished.
+   */
+  approach?: string[];
+  /** Decisions made and what they cost. Empty until the owner writes it. */
+  tradeoffs?: string[];
+  /** Result of the project. Shown as a placeholder until provided. */
+  outcome?: string;
+  /** Extra screenshots rendered below the case study on the detail page. */
+  gallery?: ProjectImage[];
 };
+
+/**
+ * Filename extensions tried, in order, for the drop-in image convention
+ * public/projects/{slug}.{ext}. webp first because it is the recommended
+ * format (see public/projects/README.md).
+ */
+export const PROJECT_IMAGE_EXTENSIONS = [
+  "webp",
+  "avif",
+  "jpg",
+  "jpeg",
+  "png",
+] as const;
 
 export const projects: Project[] = [
   {
-    slug: "smart-pill-box",
-    name: "IoT Smart Pill Box",
-    tagline: "A C++ embedded medication reminder that blinks when a dose is due.",
+    slug: "scalable-ecommerce-backend",
+    name: "Scalable E-Commerce Backend",
+    tagline:
+      "Microservice-ready Python backend: async processing, caching, messaging, auth, observability.",
     description: [
-      "A small connected device that helps keep medication schedules honest. Built in C++ on microcontroller hardware, it watches the clock and lights up when it's time for a dose — no app, no account, just a box that does one job.",
-      "The interesting parts were the constraints: working within limited memory and power, debouncing real-world hardware, and making sure reminder state survives a power cycle.",
+      "A Python backend structured to scale past a monolith: async request handling, caching layers, message-based communication between services, auth, and observability wired in from the start.",
+      "Built to practice the architectural decisions production backends demand — where to draw service boundaries, what belongs on a queue instead of a request path, and how to see inside a running system.",
     ],
-    stack: ["C++", "Embedded", "IoT"],
-    year: 2024,
-    sourceUrl: "https://github.com/KRISHNATEJATATA/Smart-pill-box",
+    stack: ["Python", "FastAPI", "Microservices"],
+    year: 2026,
+    sourceUrl: "https://github.com/KRISHNATEJATATA/scalable-ecommerce-backend",
+    demoUrl: null,
+    featured: true,
+  },
+  {
+    slug: "kafka-event-pipeline",
+    name: "Kafka Event Pipeline",
+    tagline:
+      "Event streaming on Kafka with schema validation, retries, dead-letter queues, and live metrics.",
+    description: [
+      "A streaming pipeline that moves events through Kafka the way production systems do: validate against schemas at the boundary, retry transient failures automatically, and park poison messages on a dead-letter queue instead of dropping them.",
+      "Prometheus metrics expose throughput and failures in real time — so the pipeline can actually be operated, not just demoed.",
+    ],
+    stack: ["Python", "Apache Kafka", "Prometheus"],
+    year: 2026,
+    sourceUrl: "https://github.com/KRISHNATEJATATA/kafka-event-pipeline",
     demoUrl: null,
     featured: true,
   },

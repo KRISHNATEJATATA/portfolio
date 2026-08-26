@@ -284,22 +284,16 @@
 
 /* ---------------------------------------------------------------------------
    Scroll reveal — fade + slight rise + blur-out.
-   Respects prefers-reduced-motion both here and in the Reveal component.
+   The animation itself is driven by GSAP (components/reveal.tsx) on the
+   shared gsap.ticker clock; this class only provides the pre-hydration
+   hidden state so content never flashes and stays visible without JS
+   (noscript override in app/layout.tsx). No CSS transition here — it would
+   fight GSAP's inline style updates.
 --------------------------------------------------------------------------- */
 .reveal {
   opacity: 0;
   transform: translateY(16px);
   filter: blur(6px);
-  transition:
-    opacity 480ms ease,
-    transform 480ms ease,
-    filter 480ms ease;
-}
-
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
-  filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -308,5 +302,207 @@
     transform: none;
     filter: none;
     transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Lenis smooth scroll (components/motion-provider.tsx).
+   Recommended rules from lenis/dist/lenis.css, inlined so the whole site
+   keeps a single CSS pipeline. While Lenis is active it adds `lenis
+   lenis-smooth` classes to <html>; native `scroll-behavior: smooth` above
+   must then be forced off or every per-frame scrollTo gets re-animated by
+   the browser. When Lenis is absent (no JS / reduced motion) the classes
+   are gone and native smooth scrolling applies as before.
+--------------------------------------------------------------------------- */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+
+.lenis [data-lenis-prevent],
+.lenis [data-lenis-prevent-wheel],
+.lenis [data-lenis-prevent-touch],
+.lenis [data-lenis-prevent-vertical],
+.lenis [data-lenis-prevent-horizontal] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* ---------------------------------------------------------------------------
+   SITE CHROME MOTION LAYER
+   z-scale: content (auto/0) < grain 30 < nav 50 < skip-link 60
+            < preloader 70 < cursor 80
+   Every animated property across these layers is transform/opacity only.
+--------------------------------------------------------------------------- */
+
+/* --- Film grain (components/chrome/grain-overlay.tsx) -------------------
+   Static SVG feTurbulence tile, ~3.5% opacity, overlay-blended. No JS, no
+   animation, pointer-events none. Sits above page content, below nav. */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* --- Custom cursor (components/chrome/custom-cursor.tsx) ----------------
+   Amber dot + trailing ink ring. Elements are parked at opacity 0 and only
+   revealed by GSAP inside a matched (pointer: fine) +
+   (prefers-reduced-motion: no-preference) context. */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+}
+
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px; /* centered on the transform position */
+  border-radius: 9999px;
+  background-color: var(--color-accent);
+}
+
+.cursor-ring {
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+
+/* Hide the native cursor ONLY where the custom one is actually active.
+   Form fields keep their native text caret UX. */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html.has-custom-cursor body {
+    cursor: none;
+  }
+
+  html.has-custom-cursor input,
+  html.has-custom-cursor textarea,
+  html.has-custom-cursor select {
+    cursor: auto;
+  }
+}
+
+/* --- Intro preloader (components/chrome/preloader.tsx) ------------------
+   Fixed overlay above everything except the cursor. The real page renders
+   underneath from first paint, so LCP is unaffected. Hidden pre-hydration
+   by the inline guard script (returning visitor / reduced motion) via
+   html[data-intro-skip], and with scripting off via the noscript block in
+   app/layout.tsx. */
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background);
+}
+
+html[data-intro-skip] .preloader {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preloader {
+    display: none !important;
+  }
+}
+
+.preloader-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.preloader-line {
+  display: block;
+  width: min(14rem, 40vw);
+  height: 1px;
+  background-color: var(--color-line);
+}
+
+.preloader-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-accent);
+  transform-origin: left center;
+}
+
+/* --- Route transitions (app/template.tsx) --------------------------------
+   React <ViewTransition> classes. Old page exits up-and-out quickly; the
+   new page rises in with a soft blur after a short handoff gap — same
+   fade/rise/blur language as the Reveal primitive. Unnamed content keeps
+   working normally in browsers without the View Transitions API. */
+::view-transition-old(.route-exit) {
+  animation: 160ms ease-in both vt-route-out;
+}
+
+::view-transition-new(.route-enter) {
+  animation: 300ms ease-out 120ms both vt-route-in;
+}
+
+@keyframes vt-route-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+    filter: blur(3px);
+  }
+}
+
+@keyframes vt-route-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Let clicks pass through the transition snapshot instead of eating them
+   (per the Next view-transitions guide). */
+::view-transition {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

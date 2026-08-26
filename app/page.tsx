@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, Mail } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { KineticHero } from "@/components/kinetic-hero";
 import { ContactForm } from "@/components/contact-form";
+import { SkillsSection } from "@/components/skills-section";
+import { ExperienceSection } from "@/components/experience-section";
 import { getFeaturedProjects } from "@/lib/projects";
 
 const EMAIL = "tejakrishnatata@gmail.com";
@@ -15,34 +18,37 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero */}
+      {/* Hero — kinetic entrance timed to the site intro (components/kinetic-hero.tsx).
+          Replaces the previous Reveal wrappers so the two entrance systems never stack. */}
       <section className="shell pb-24 pt-20 sm:pt-28 lg:pb-32 lg:pt-36">
-        <Reveal>
-          <h1 className="font-display text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-[1.05] tracking-display">
-            Krishna Teja
-            <br />
-            <span className="hl">Software Engineer</span>
-          </h1>
-        </Reveal>
+        <KineticHero
+          nameLines={[
+            { text: "Krishna Teja" },
+            { text: "Backend Engineer", hl: true },
+          ]}
+          tagline="Building event-driven data platforms in Python on AWS."
+        >
+          <Link href="/projects" className="btn btn-primary">
+            View Projects
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+          <a href="#contact" className="btn btn-outline">
+            <Mail size={16} aria-hidden="true" />
+            Get in Touch
+          </a>
+        </KineticHero>
 
-        <Reveal delay={120}>
-          <p className="mt-8 max-w-xl text-lg text-muted sm:text-xl">
-            Building across data, AI, and devices.
-          </p>
-        </Reveal>
-
-        <Reveal delay={240}>
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link href="/projects" className="btn btn-primary">
-              View Projects
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-            <a href="#contact" className="btn btn-outline">
-              <Mail size={16} aria-hidden="true" />
-              Get in Touch
-            </a>
-          </div>
-        </Reveal>
+        {/* Without scripting the kinetic hidden states never clear on their
+            own — force the hero fully visible (mirrors the .reveal noscript
+            override in app/layout.tsx). */}
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html:
+                "[data-kh-char],[data-kh-fade]{opacity:1 !important;transform:none !important}",
+            }}
+          />
+        </noscript>
       </section>
 
       {/* About */}
@@ -56,16 +62,16 @@ export default function HomePage() {
           <Reveal delay={100}>
             <div className="max-w-[65ch] space-y-6 text-lg text-muted">
               <p>
-                I&rsquo;m Krishna Teja, a software engineer who likes building
-                across the whole stack &mdash; from AWS ETL pipelines that move
-                real data, to generative AI experiments, to an IoT smart pill
-                box that blinks at you in C++.
+                I&rsquo;m Krishna Teja, a software consultant at Encora
+                Digital (a Coforge company), building the recommendation
+                platform for Avid Content Core &mdash; event-driven pipelines
+                that turn user activity into personalized recommendations.
               </p>
               <p>
-                I care about tools that work quietly and well. When I&rsquo;m
-                not shipping, I&rsquo;m sharpening problem-solving on LeetCode
-                or tinkering with whatever technology caught my attention that
-                week.
+                My work lives mostly in Python and AWS: Kafka and Kinesis
+                ingestion, Snowflake-backed batch scoring, and FastAPI services
+                serving results over Valkey and PostgreSQL. I care about tools
+                that work quietly and well.
               </p>
               <p>
                 Want the details? The{" "}
@@ -83,6 +89,14 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Skills — grouped capability lists, data-driven from lib/skills.ts
+          (closes docs/portfolio-gap-report.md item 4). */}
+      <SkillsSection />
+
+      {/* Experience — renders nothing until roles exist in lib/experience.ts
+          (closes docs/portfolio-gap-report.md item 5). */}
+      <ExperienceSection />
+
       {/* Featured projects */}
       <section
         aria-labelledby="featured-heading"
@@ -99,25 +113,37 @@ export default function HomePage() {
             {featured.map((project, index) => (
               <li key={project.slug}>
                 <Reveal delay={index * 80}>
+                  {/* Hover/focus treatment: amber wash sweeps in from the left
+                      (scaleX, origin-left), year + tagline drift a few px, and
+                      the arrow nudge is absorbed into a longer slide. Every
+                      moving part is transform/opacity only, 300ms on a cubic
+                      ease, gated behind motion-safe, and mirrored 1:1 under
+                      :focus-visible for keyboard parity. The sweep sits at -z-10
+                      inside an isolated stacking context so text stays above it;
+                      contrast (ink/muted/accent on the tinted wash) stays WCAG AA. */}
                   <Link
                     href={`/projects/${project.slug}`}
-                    className="group grid gap-3 border-b border-line py-8 transition-colors sm:grid-cols-[6rem_1fr_auto] sm:items-center sm:gap-8"
+                    className="group relative isolate grid gap-3 border-b border-line py-8 transition-colors sm:grid-cols-[6rem_1fr_auto] sm:items-center sm:gap-8"
                   >
-                    <span className="text-sm font-medium text-muted">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 -z-10 origin-left scale-x-0 bg-accent/10 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-focus-visible:scale-x-100 motion-safe:group-hover:scale-x-100"
+                    />
+                    <span className="text-sm font-medium text-muted transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-focus-visible:translate-x-1 motion-safe:group-hover:translate-x-1">
                       {project.year}
                     </span>
                     <span>
-                      <span className="block font-display text-2xl font-semibold tracking-display transition-colors group-hover:text-accent sm:text-3xl">
+                      <span className="block font-display text-2xl font-semibold tracking-display transition-colors group-focus-visible:text-accent group-hover:text-accent sm:text-3xl">
                         {project.name}
                       </span>
-                      <span className="mt-1 block text-muted">
+                      <span className="mt-1 block text-muted transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-focus-visible:translate-x-1 motion-safe:group-hover:translate-x-1">
                         {project.tagline}
                       </span>
                     </span>
                     <ArrowRight
                       size={22}
                       aria-hidden="true"
-                      className="hidden text-muted transition-all duration-300 group-hover:translate-x-1 group-hover:text-accent sm:block"
+                      className="hidden text-muted transition-[translate,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-focus-visible:text-accent group-hover:text-accent motion-safe:group-focus-visible:translate-x-1.5 motion-safe:group-hover:translate-x-1.5 sm:block"
                     />
                   </Link>
                 </Reveal>
