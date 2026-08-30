@@ -1,4 +1,5 @@
 /**
+ * Deployed as a Google Apps Script web app, this is for reference only.
  * Portfolio contact form → Google Sheet + email notification.
  * ---------------------------------------------------------------------------
  *

@@ -73,7 +73,7 @@ export default async function ProjectPage({
 
       <header className="mt-10 border-b border-line pb-10 sm:mt-14">
         <Reveal delay={80}>
-          <h1 className="font-display text-[clamp(2.25rem,6vw,4rem)] font-semibold leading-tight tracking-display">
+          <h1 className="font-display text-[clamp(2.25rem,6vw,4rem)] font-semibold leading-tight tracking-display text-accent">
             {project.name}
           </h1>
           <p className="mt-4 max-w-[60ch] text-lg text-muted sm:text-xl">
@@ -96,8 +96,7 @@ export default async function ProjectPage({
       </header>
 
       {/* Cover imagery. Renders automatically once files follow the convention
-          in public/projects/README.md; until then this is a designed
-          typographic slot, not a broken placeholder. */}
+          in public/projects/README.md; nothing renders until then. */}
       {/* TODO(owner): drop public/projects/{slug}.webp plus a one-line
           public/projects/{slug}.alt.txt (see public/projects/README.md), or set
           the optional `image` field on this project in lib/projects.ts.
@@ -105,10 +104,8 @@ export default async function ProjectPage({
       <Reveal delay={200}>
         <ProjectMedia
           media={media}
-          index={projects.findIndex((p) => p.slug === project.slug)}
           sizes={HERO_SIZES}
           preload={media !== null}
-          size="hero"
           className="mt-10 rounded-xl border border-line"
         />
       </Reveal>

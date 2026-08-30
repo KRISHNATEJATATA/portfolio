@@ -8,6 +8,7 @@ import { MotionProvider } from "@/components/motion-provider";
 import { Preloader } from "@/components/chrome/preloader";
 import { CustomCursor } from "@/components/chrome/custom-cursor";
 import { GrainOverlay } from "@/components/chrome/grain-overlay";
+import { FaviconLink } from "@/components/chrome/favicon-link";
 
 /**
  * Site-wide z-index scale (chrome motion layer):
@@ -79,6 +80,16 @@ export const metadata: Metadata = {
     description:
       "Event-driven data platforms in Python on AWS. Kafka/Kinesis ingestion, Snowflake analytics, low-latency ML serving.",
   },
+  /**
+   * favicon.ico (dark, via the app/favicon.ico file convention) is the
+   * no-JS/pre-hydration fallback. The theme-aware png icon is owned by
+   * <FaviconLink> below, not metadata, so it can react to the toggle
+   * without fighting Next's head reconciliation. apple-icon.png (dark) is
+   * the iOS home-screen bookmark artwork, which has no theme.
+   */
+  icons: {
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 /**
@@ -122,7 +133,7 @@ const personJsonLd = {
  * bug. The attribute is never touched by React state, so no re-render can
  * clobber it.
  */
-const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}var d=document.documentElement;d.setAttribute("data-theme",t);var c=t==="light"?"#f7f5f0":"#0a0a0b";var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].setAttribute("content",c)}}catch(e){}})();`;
+const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"){t="dark"}var d=document.documentElement;d.setAttribute("data-theme",t);var c=t==="light"?"#f7f5f0":"#0a0a0b";var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].setAttribute("content",c)}}catch(e){}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -138,6 +149,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* MUST stay the first body child: synchronous, parser-blocking, so
             data-theme lands before any content paints. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* React hoists this <link> into <head> and keeps it reactive to the
+            theme toggle, taking over from the static favicon.ico fallback. */}
+        <FaviconLink />
         {/* Structured data for crawlers: schema.org Person JSON-LD. The "<"
             is escaped so stringified JSON can never break out into markup. */}
         <script

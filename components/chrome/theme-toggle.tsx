@@ -1,26 +1,29 @@
 "use client";
 
-import { useCallback, useReducer, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
+import {
+  getServerThemeSnapshot,
+  getThemeSnapshot,
+  setTheme,
+  subscribeToTheme,
+} from "@/lib/theme";
 
 /**
  * Light/dark theme toggle — the only UI that writes the theme.
  *
  * Mechanism: the theme lives entirely on <html data-theme="light|dark">;
- * CSS token overrides in app/globals.css do the rest. This component flips
- * the attribute, persists the explicit choice to localStorage("theme"),
- * and re-synchronizes the media-scoped theme-color metas (see the viewport
- * export in app/layout.tsx). The pre-paint boot script in layout.tsx owns
- * the initial value; this button only ever runs post-hydration.
+ * CSS token overrides in app/globals.css do the rest. lib/theme.ts owns the
+ * read/write/subscribe logic (shared with FaviconLink). The pre-paint boot
+ * script in layout.tsx sets the initial value; this button only ever runs
+ * post-hydration.
  *
  * Hydration strategy: the rendered icon/label READS the <html> attribute
  * through useSyncExternalStore — same contract as the preloader's skip-intro
  * check. The server snapshot assumes "dark" (the SSR default attribute), so
  * server HTML and first client render always match; on the client the
  * snapshot reflects whatever the boot script actually resolved, correcting
- * within the first commit without an effect or a cascading render. Clicking
- * mutates the attribute directly (it IS the store), then forces one re-render
- * so the snapshot is re-read.
+ * within the first commit without an effect or a cascading render.
  *
  * Accessibility: aria-label announces the ACTION ("Switch to light theme"),
  * not the state, so screen reader users hear what clicking will do. The
@@ -34,64 +37,15 @@ import { Moon, Sun } from "lucide-react";
  * globals.css, so themes never cross-fade.
  */
 
-type Theme = "light" | "dark";
-
-const STORAGE_KEY = "theme";
-
-/**
- * Browser-chrome colors per theme. MUST stay in sync with the `viewport`
- * export (themeColor) in app/layout.tsx and the values baked into
- * THEME_BOOT_SCRIPT there.
- */
-const THEME_COLOR: Record<Theme, string> = {
-  light: "#f7f5f0",
-  dark: "#0a0a0b",
-};
-
-/** The <html> attribute is the single source of truth — never local state. */
-function getThemeSnapshot(): Theme {
-  return document.documentElement.getAttribute("data-theme") === "light"
-    ? "light"
-    : "dark";
-}
-
-/** SSR/first render assume the server-rendered default attribute. */
-function getServerThemeSnapshot(): Theme {
-  return "dark";
-}
-
-/** Nothing else mutates data-theme at runtime, so no real subscription. */
-const noopSubscribe = () => () => {};
-
 export function ThemeToggle() {
   const theme = useSyncExternalStore(
-    noopSubscribe,
+    subscribeToTheme,
     getThemeSnapshot,
     getServerThemeSnapshot,
   );
-  // Click rewires the external store (the attribute) imperatively; bump a
-  // counter so the snapshot is re-read and the icon/label follow.
-  const [, rerender] = useReducer((count: number) => count + 1, 0);
 
   const handleClick = useCallback(() => {
-    const next: Theme = getThemeSnapshot() === "dark" ? "light" : "dark";
-
-    document.documentElement.setAttribute("data-theme", next);
-
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* private mode: choice just won't survive reload; OS fallback applies */
-    }
-
-    // Both metas get the same value: whichever entry the browser currently
-    // honors (its OS preference decides) then shows the ACTIVE theme's color,
-    // even when the manual choice contradicts the OS preference.
-    document
-      .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
-      .forEach((meta) => meta.setAttribute("content", THEME_COLOR[next]));
-
-    rerender();
+    setTheme(getThemeSnapshot() === "dark" ? "light" : "dark");
   }, []);
 
   return (

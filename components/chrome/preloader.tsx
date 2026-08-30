@@ -27,8 +27,8 @@ import gsap from "gsap";
  * is hidden by CSS before any content after it paints. The noscript block in
  * app/layout.tsx hides it when scripting is unavailable entirely.
  *
- * Timing budget: progress line 0.85s -> exit wipe 0.42s. Total ≈ 1.27s,
- * under the 1.5s cap. The brand name renders immediately (no fade-in) so it
+ * Timing budget: progress line 1.25s -> exit wipe 0.42s. Total ≈ 1.67s,
+ * under the 2s cap. The brand name renders immediately (no fade-in) so it
  * is visible from the first paint even before GSAP has hydrated.
  */
 
@@ -99,36 +99,41 @@ export function Preloader() {
       return () => cancelAnimationFrame(raf);
     }
 
-    const ctx = gsap.context(() => {
-      gsap.set(fill, { scaleX: 0 });
+    // A plain timeline (no gsap.context) — a context left "open" here would
+    // keep auto-capturing every GSAP animation created ANYWHERE ELSE in the
+    // app for as long as it stays unreverted (this is documented GSAP
+    // behavior, not scoped to this component's own elements). Since the
+    // hero's entrance animation starts from the "intro:complete" event fired
+    // inside this effect, a still-open context here would capture it too and
+    // then wipe it out the moment this effect's cleanup reverts.
+    gsap.set(fill, { scaleX: 0 });
 
-      const tl = gsap.timeline({
-        onComplete: () => {
-          setGone(true);
-          fireIntroComplete();
-        },
-      });
-
-      tl.to(
-          fill,
-          { scaleX: 1, duration: 0.85, ease: "power2.inOut" },
-          0,
-        )
-        // Persist the flag BEFORE the wipe so a refresh mid-exit still
-        // counts as seen and never replays the intro this session.
-        .add(() => {
-          try {
-            sessionStorage.setItem(SEEN_KEY, "");
-          } catch {
-            /* private mode: intro simply replays next load */
-          }
-        })
-        .to(rootRef.current, { yPercent: -100, duration: 0.42, ease: "power4.inOut" }, 0.85);
+    const tl = gsap.timeline({
+      onComplete: () => {
+        setGone(true);
+        fireIntroComplete();
+      },
     });
+
+    tl.to(
+        fill,
+        { scaleX: 1, duration: 3.95, ease: "power2.inOut" },
+        0,
+      )
+      // Persist the flag BEFORE the wipe so a refresh mid-exit still
+      // counts as seen and never replays the intro this session.
+      .add(() => {
+        try {
+          sessionStorage.setItem(SEEN_KEY, "");
+        } catch {
+          /* private mode: intro simply replays next load */
+        }
+      })
+      .to(rootRef.current, { yPercent: -100, duration: 3.42, ease: "power4.inOut" }, 3.95);
 
     // Skippable: click or any keypress (incl. Esc) dismisses instantly.
     const skip = () => {
-      ctx.kill();
+      tl.kill();
       window.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
       try {
@@ -145,7 +150,7 @@ export function Preloader() {
     return () => {
       window.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
-      ctx.revert();
+      tl.kill();
     };
   }, [skipIntro]);
 

@@ -510,14 +510,6 @@ html[data-intro-skip] .preloader {
   gap: 1.25rem;
 }
 
-/* Pre-hydration hidden state for the brand mark — matches the GSAP `set()`
-   values in preloader.tsx so the name does not flash at full opacity before
-   GSAP's effect runs and animates it in. */
-.preloader-mark {
-  opacity: 0;
-  transform: translate3d(0, 10px, 0);
-}
-
 .preloader-line {
   display: block;
   width: min(14rem, 40vw);
