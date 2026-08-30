@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kafka Event Pipeline · Architecture (dark)</title>
+<!-- 
+  Authoring source — diagram-design skill (vendored at .agents/skills/diagram-design,
+  MIT), onboarded to the portfolio brand: see references/style-guide.md (2026-08-26).
+  Minimal dark variant. The <svg> below is the export unit: canvas stays
+  transparent because the site container paints the background, and no webfont
+  is linked because <img>-embedded SVGs cannot fetch fonts (system stacks only).
+-->
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --color-paper:   #0a0a0b;
+    --color-paper-2: #131315;
+    --color-ink:     #f4f1ea;
+    --color-muted:   #a8a29e;
+    --color-accent:  #f59e0b;
+    --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'Satoshi', monospace;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 2rem;
+  }
+  .frame { max-width: 1200px; width: 100%; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--color-muted); margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-family: var(--font-sans); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+    font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;
+    color: var(--color-ink); margin-bottom: 1.5rem;
+  }
+  svg { width: 100%; display: block; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <p class="eyebrow">Architecture · Kafka Event Pipeline</p>
+  <h1>An event's trip through the broker, retries included</h1>
+
+  <svg viewBox="0 0 1040 480" width="1040" height="480" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="kafka-dark-title kafka-dark-desc">
+    <title id="kafka-dark-title">Kafka event pipeline</title>
+    <desc id="kafka-dark-desc">Architecture of a Kafka streaming pipeline: a schema-validating producer feeds a Kafka broker whose topics feed a multi-stage validating consumer that commits processed events in batches, retries failures with exponential backoff before dead-lettering them, while Zookeeper coordinates the broker and Prometheus scrapes consumer metrics.</desc>
+    <defs>
+      <marker id="kafka-dark-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a8a29e"/></marker>
+      <marker id="kafka-dark-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/></marker>
+    </defs>
+
+    <!-- Editorial aside: correlation IDs ride every hop (callout, max 2 rule) -->
+    <text x="272" y="92" fill="#a8a29e" font-size="14" font-style="italic" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">correlation IDs trace every hop</text>
+    <line x1="420" y1="102" x2="420" y2="144" stroke="rgba(244,241,234,0.18)" stroke-width="0.8"/>
+
+    <!-- Arrows first (behind boxes) -->
+    <line x1="176" y1="200" x2="272" y2="200" stroke="#a8a29e" stroke-width="1.2" marker-end="url(#kafka-dark-arrow)"/>
+    <line x1="448" y1="184" x2="560" y2="184" stroke="#f59e0b" stroke-width="1.4" marker-end="url(#kafka-dark-arrow-accent)"/>
+    <line x1="560" y1="216" x2="448" y2="216" stroke="#a8a29e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#kafka-dark-arrow)"/>
+    <line x1="736" y1="200" x2="856" y2="200" stroke="#a8a29e" stroke-width="1.2" marker-end="url(#kafka-dark-arrow)"/>
+    <line x1="360" y1="248" x2="360" y2="320" stroke="#a8a29e" stroke-width="1.2" marker-end="url(#kafka-dark-arrow)"/>
+    <line x1="648" y1="320" x2="648" y2="232" stroke="#a8a29e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#kafka-dark-arrow)"/>
+    <path d="M 176,352 H 288 Q 296,352 296,344 V 248" fill="none" stroke="#a8a29e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#kafka-dark-arrow)"/>
+
+    <!-- Arrow labels — masked, 8px gap above their stroke -->
+    <rect x="188" y="180" width="64" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="220" y="189" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.06em">PRODUCE</text>
+    <rect x="472" y="164" width="64" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="504" y="173" fill="#f59e0b" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.06em">CONSUME</text>
+    <rect x="476" y="196" width="60" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="506" y="205" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.06em">RETRY ×3</text>
+    <rect x="764" y="180" width="60" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="794" y="189" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.06em">COMMIT</text>
+    <rect x="372" y="276" width="56" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="400" y="285" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.06em">POISON</text>
+    <rect x="656" y="268" width="96" height="12" rx="2" fill="#0a0a0b"/>
+    <text x="660" y="277" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" letter-spacing="0.06em">:8000/metrics</text>
+
+    <!-- Node: Producer (input) -->
+    <rect x="48" y="168" width="128" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="48" y="168" width="128" height="64" rx="6" fill="rgba(168,162,158,0.10)" stroke="rgba(244,241,234,0.55)" stroke-width="1"/>
+    <rect x="56" y="176" width="28" height="12" rx="2" fill="transparent" stroke="rgba(244,241,234,0.30)" stroke-width="0.8"/>
+    <text x="70" y="185" fill="rgba(244,241,234,0.55)" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">IN</text>
+    <text x="112" y="204" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Producer</text>
+    <text x="112" y="220" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">JSON schema checks</text>
+
+    <!-- Node: Kafka Broker (focal — the primary integration point) -->
+    <rect x="272" y="152" width="176" height="96" rx="6" fill="#0a0a0b"/>
+    <rect x="272" y="152" width="176" height="96" rx="6" fill="rgba(245,158,11,0.10)" stroke="#f59e0b" stroke-width="1"/>
+    <rect x="280" y="160" width="36" height="12" rx="2" fill="transparent" stroke="rgba(245,158,11,0.50)" stroke-width="0.8"/>
+    <text x="298" y="169" fill="#f59e0b" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">BUS</text>
+    <text x="360" y="204" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Kafka Broker</text>
+    <text x="360" y="220" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">event topics</text>
+
+    <!-- Node: Consumer (backend) -->
+    <rect x="560" y="168" width="176" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="560" y="168" width="176" height="64" rx="6" fill="#131315" stroke="#f4f1ea" stroke-width="1"/>
+    <rect x="568" y="176" width="36" height="12" rx="2" fill="transparent" stroke="rgba(244,241,234,0.40)" stroke-width="0.8"/>
+    <text x="586" y="185" fill="rgba(244,241,234,0.55)" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
+    <text x="648" y="204" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Consumer</text>
+    <text x="648" y="220" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">envelope→type→payload</text>
+
+    <!-- Node: Processed events (store) -->
+    <rect x="856" y="168" width="144" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="856" y="168" width="144" height="64" rx="6" fill="rgba(244,241,234,0.05)" stroke="#a8a29e" stroke-width="1"/>
+    <rect x="864" y="176" width="36" height="12" rx="2" fill="transparent" stroke="rgba(168,162,158,0.50)" stroke-width="0.8"/>
+    <text x="882" y="185" fill="#a8a29e" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">OUT</text>
+    <text x="928" y="204" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Processed events</text>
+    <text x="928" y="220" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">batch commits</text>
+
+    <!-- Node: Dead-letter queue (store) -->
+    <rect x="272" y="320" width="176" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="272" y="320" width="176" height="64" rx="6" fill="rgba(244,241,234,0.05)" stroke="#a8a29e" stroke-width="1"/>
+    <rect x="280" y="328" width="36" height="12" rx="2" fill="transparent" stroke="rgba(168,162,158,0.50)" stroke-width="0.8"/>
+    <text x="298" y="337" fill="#a8a29e" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">DLQ</text>
+    <text x="360" y="356" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Dead-letter queue</text>
+    <text x="360" y="372" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">after 3 retries</text>
+
+    <!-- Node: Zookeeper (optional / coordination, dashed) -->
+    <rect x="48" y="320" width="128" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="48" y="320" width="128" height="64" rx="6" fill="rgba(244,241,234,0.02)" stroke="rgba(244,241,234,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+    <rect x="56" y="328" width="28" height="12" rx="2" fill="transparent" stroke="rgba(244,241,234,0.20)" stroke-width="0.8"/>
+    <text x="70" y="337" fill="rgba(244,241,234,0.55)" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">ZK</text>
+    <text x="112" y="356" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Zookeeper</text>
+    <text x="112" y="372" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">coordination</text>
+
+    <!-- Node: Prometheus (external) -->
+    <rect x="576" y="320" width="144" height="64" rx="6" fill="#0a0a0b"/>
+    <rect x="576" y="320" width="144" height="64" rx="6" fill="rgba(244,241,234,0.03)" stroke="rgba(244,241,234,0.30)" stroke-width="1"/>
+    <rect x="584" y="328" width="36" height="12" rx="2" fill="transparent" stroke="rgba(244,241,234,0.22)" stroke-width="0.8"/>
+    <text x="602" y="337" fill="rgba(244,241,234,0.55)" font-size="7" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle" letter-spacing="0.08em">OBS</text>
+    <text x="648" y="356" fill="#f4f1ea" font-size="12" font-weight="600" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif" text-anchor="middle">Prometheus</text>
+    <text x="648" y="372" fill="#a8a29e" font-size="9" font-family="ui-monospace, 'Satoshi', monospace" text-anchor="middle">scrapes metrics</text>
+
+    <!-- Legend strip (never inside the diagram area) -->
+    <line x1="40" y1="404" x2="1000" y2="404" stroke="rgba(244,241,234,0.12)" stroke-width="0.8"/>
+    <text x="40" y="420" fill="#a8a29e" font-size="8" font-family="ui-monospace, 'Satoshi', monospace" letter-spacing="0.18em">LEGEND</text>
+    <rect x="40" y="430" width="14" height="10" rx="2" fill="rgba(245,158,11,0.10)" stroke="#f59e0b" stroke-width="1"/>
+    <text x="60" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Focal</text>
+    <rect x="132" y="430" width="14" height="10" rx="2" fill="rgba(244,241,234,0.05)" stroke="#a8a29e" stroke-width="1"/>
+    <text x="152" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Store</text>
+    <rect x="216" y="430" width="14" height="10" rx="2" fill="#131315" stroke="#f4f1ea" stroke-width="1"/>
+    <text x="236" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Backend</text>
+    <rect x="324" y="430" width="14" height="10" rx="2" fill="rgba(244,241,234,0.03)" stroke="rgba(244,241,234,0.30)" stroke-width="1"/>
+    <text x="344" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">External</text>
+    <rect x="432" y="430" width="14" height="10" rx="2" fill="rgba(168,162,158,0.10)" stroke="rgba(244,241,234,0.55)" stroke-width="1"/>
+    <text x="452" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Input</text>
+    <rect x="520" y="430" width="14" height="10" rx="2" fill="rgba(244,241,234,0.02)" stroke="rgba(244,241,234,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="540" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Coordination</text>
+    <line x1="644" y1="435" x2="676" y2="435" stroke="#a8a29e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#kafka-dark-arrow)"/>
+    <text x="684" y="438" fill="#a8a29e" font-size="8" font-family="Satoshi, ui-sans-serif, system-ui, sans-serif">Retry / scrape</text>
+  </svg>
+</div>
+</body>
+</html>

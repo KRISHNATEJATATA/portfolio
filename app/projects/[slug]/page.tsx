@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons";
 import { ProjectMedia } from "@/components/project-media";
 import { Reveal } from "@/components/reveal";
+import { ThemedDiagram } from "@/components/themed-diagram";
 import { resolveProjectImage } from "@/lib/project-media";
 import { getProjectBySlug, projects } from "@/lib/projects";
 
@@ -49,19 +50,13 @@ export default async function ProjectPage({
 
   // Case-study copy. Existing `description` is re-flowed rather than
   // rewritten: paragraph one becomes the overview, the rest becomes the
-  // approach notes until the owner fills the dedicated fields.
+  // approach notes until the owner fills the dedicated field.
   const overview = project.description.slice(0, 1);
   const approach = project.approach ?? project.description.slice(1);
 
   const sections: { heading: string; paragraphs: string[] }[] = [
     { heading: "Overview", paragraphs: overview },
-    { heading: "Problem", paragraphs: project.problem ?? [] },
     { heading: "Approach", paragraphs: approach },
-    { heading: "Trade-offs", paragraphs: project.tradeoffs ?? [] },
-    {
-      heading: "Outcome",
-      paragraphs: project.outcome ? [project.outcome] : [],
-    },
   ];
 
   return (
@@ -84,11 +79,6 @@ export default async function ProjectPage({
           <p className="mt-4 max-w-[60ch] text-lg text-muted sm:text-xl">
             {project.tagline}
           </p>
-          {project.role && (
-            <p className="mt-3 text-sm font-medium text-muted">
-              Role: {project.role}
-            </p>
-          )}
         </Reveal>
 
         <Reveal delay={160}>
@@ -123,7 +113,7 @@ export default async function ProjectPage({
         />
       </Reveal>
 
-      {/* Case study: problem -> approach -> trade-offs -> outcome. */}
+      {/* Case study: overview -> approach. */}
       <Reveal delay={240}>
         <div className="mt-12">
           {sections.map((section) => (
@@ -135,16 +125,9 @@ export default async function ProjectPage({
                 {section.heading}
               </h2>
               <div className="max-w-[65ch] space-y-5 text-lg text-muted">
-                {section.paragraphs.length > 0 ? (
-                  section.paragraphs.map((paragraph) => (
-                    <p key={paragraph.slice(0, 32)}>{paragraph}</p>
-                  ))
-                ) : (
-                  /* TODO(owner): write this section via the optional fields in
-                     lib/projects.ts (`problem`, `tradeoffs`, `outcome`).
-                     Until then it intentionally shows a quiet placeholder. */
-                  <p className="italic">Notes coming soon.</p>
-                )}
+                {section.paragraphs.map((paragraph) => (
+                  <p key={paragraph.slice(0, 32)}>{paragraph}</p>
+                ))}
               </div>
             </section>
           ))}
@@ -158,23 +141,41 @@ export default async function ProjectPage({
         <Reveal delay={280}>
           <section className="border-t border-line py-10">
             <h2 className="font-display text-xl font-semibold tracking-display text-ink">
-              Screenshots
+              {project.gallery.every((s) => Boolean(s.lightSrc))
+                ? "Architecture"
+                : "Screenshots"}
             </h2>
             <ul className="mt-8 grid gap-6 sm:grid-cols-2">
-              {project.gallery.map((shot) => (
-                <li
-                  key={shot.src}
-                  className="relative aspect-[16/9] overflow-hidden rounded-xl border border-line bg-background"
-                >
-                  <Image
-                    src={shot.src}
-                    alt={shot.alt}
-                    fill
-                    sizes={GALLERY_SIZES}
-                    className="object-cover"
-                  />
-                </li>
-              ))}
+              {project.gallery.map((shot) =>
+                shot.lightSrc && shot.width && shot.height ? (
+                  // Theme-paired diagram (SVG): CSS swaps the variant, and the
+                  // frame is a button that opens it fullscreen — see
+                  // components/themed-diagram.
+                  <li key={shot.src}>
+                    <ThemedDiagram
+                      src={shot.src}
+                      lightSrc={shot.lightSrc}
+                      alt={shot.alt}
+                      width={shot.width}
+                      height={shot.height}
+                      name={project.name}
+                    />
+                  </li>
+                ) : (
+                  <li
+                    key={shot.src}
+                    className="relative aspect-[16/9] overflow-hidden rounded-xl border border-line bg-background"
+                  >
+                    <Image
+                      src={shot.src}
+                      alt={shot.alt}
+                      fill
+                      sizes={GALLERY_SIZES}
+                      className="object-cover"
+                    />
+                  </li>
+                ),
+              )}
             </ul>
           </section>
         </Reveal>
@@ -191,17 +192,6 @@ export default async function ProjectPage({
             <GithubIcon size={16} aria-hidden="true" />
             View Source <span className="sr-only">(opens in new tab)</span>
           </a>
-          {project.demoUrl !== null && (
-            <a
-              href={project.demoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline"
-            >
-              <ExternalLink size={16} aria-hidden="true" />
-              Live Demo <span className="sr-only">(opens in new tab)</span>
-            </a>
-          )}
         </div>
       </Reveal>
     </article>

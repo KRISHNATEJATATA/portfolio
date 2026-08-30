@@ -5,6 +5,20 @@
 export type ProjectImage = {
   /** Path relative to public/, e.g. "/projects/aws-etl.webp". */
   src: string;
+  /**
+   * Paired light-theme variant of `src` (e.g. a light-styled architecture
+   * diagram), swapped in via CSS when html[data-theme="light"]. When omitted,
+   * the single `src` renders in both themes.
+   */
+  lightSrc?: string;
+  /**
+   * Intrinsic viewBox dimensions of the rendered SVG, as printed by
+   * `npm run diagrams`. With the height-auto gallery frame these let the
+   * browser reserve the exact final height before the file loads — no CLS,
+   * no forced crop. Diagram entries should always carry them.
+   */
+  width?: number;
+  height?: number;
   /** What the image shows, in a sentence. Read by screen readers. */
   alt: string;
 };
@@ -13,11 +27,11 @@ export type Project = {
   slug: string;
   name: string;
   tagline: string;
+  /** Case-study copy. Paragraph one is the Overview section on the detail page. */
   description: string[];
   stack: string[];
   year: number;
   sourceUrl: string;
-  demoUrl: string | null;
   featured: boolean;
 
   /* ------------------------------------------------------------------ */
@@ -33,20 +47,15 @@ export type Project = {
    * .{webp,avif,jpg,jpeg,png} at build time and uses it automatically.
    */
   image?: ProjectImage;
-  /** The owner's role on the project, e.g. "Solo build". Shown near the title. */
-  role?: string;
-  /** The problem the project solves. Empty until the owner writes it. */
-  problem?: string[];
   /**
    * How it was built. When omitted, the detail page re-flows the tail of
    * `description` into this section so nothing looks unfinished.
    */
   approach?: string[];
-  /** Decisions made and what they cost. Empty until the owner writes it. */
-  tradeoffs?: string[];
-  /** Result of the project. Shown as a placeholder until provided. */
-  outcome?: string;
-  /** Extra screenshots rendered below the case study on the detail page. */
+  /**
+   * Extra visuals rendered below the case study on the detail page —
+   * screenshots and architecture diagrams alike.
+   */
   gallery?: ProjectImage[];
 };
 
@@ -76,8 +85,17 @@ export const projects: Project[] = [
     stack: ["Python", "FastAPI", "Microservices"],
     year: 2026,
     sourceUrl: "https://github.com/KRISHNATEJATATA/scalable-ecommerce-backend",
-    demoUrl: null,
     featured: true,
+    gallery: [
+      {
+        src: "/projects/scalable-ecommerce-backend-architecture.dark.svg",
+        lightSrc:
+          "/projects/scalable-ecommerce-backend-architecture.light.svg",
+        width: 1304,
+        height: 648,
+        alt: "Request path through the FastAPI layers — middleware, routes, schemas, services, repositories — into PostgreSQL, Valkey, and S3, beside the transactional-outbox relay feeding the SNS/SQS bus and its image, cache-invalidation, and reservation-reaper workers.",
+      },
+    ],
   },
   {
     slug: "kafka-event-pipeline",
@@ -91,8 +109,16 @@ export const projects: Project[] = [
     stack: ["Python", "Apache Kafka", "Prometheus"],
     year: 2026,
     sourceUrl: "https://github.com/KRISHNATEJATATA/kafka-event-pipeline",
-    demoUrl: null,
     featured: true,
+    gallery: [
+      {
+        src: "/projects/kafka-event-pipeline-architecture.dark.svg",
+        lightSrc: "/projects/kafka-event-pipeline-architecture.light.svg",
+        width: 1040,
+        height: 480,
+        alt: "An event's journey from the producer through JSON-schema validation into Kafka topics, multi-stage validation and batch offset commits in the consumer, exponential-backoff retries dead-lettering onto the broker, with Prometheus scraping consumer metrics.",
+      },
+    ],
   },
   {
     slug: "aws-etl",
@@ -105,8 +131,16 @@ export const projects: Project[] = [
     stack: ["Python", "AWS", "ETL"],
     year: 2025,
     sourceUrl: "https://github.com/KRISHNATEJATATA/aws_etl",
-    demoUrl: null,
     featured: true,
+    gallery: [
+      {
+        src: "/projects/aws-etl-architecture.dark.svg",
+        lightSrc: "/projects/aws-etl-architecture.light.svg",
+        width: 1040,
+        height: 480,
+        alt: "Ingest-to-query flow: enterprise.csv lands in a private S3 source bucket, a Glue crawler registers it in the Data Catalog, a Glue ETL job transforms it into a curated S3 target bucket, and Athena queries the result.",
+      },
+    ],
   },
   {
     slug: "generative-ai",
@@ -119,7 +153,6 @@ export const projects: Project[] = [
     stack: ["Python", "GenAI"],
     year: 2025,
     sourceUrl: "https://github.com/KRISHNATEJATATA/Generative-Ai",
-    demoUrl: null,
     featured: false,
   },
   {
@@ -133,7 +166,6 @@ export const projects: Project[] = [
     stack: ["JavaScript", "Web", "REST API"],
     year: 2023,
     sourceUrl: "https://github.com/KRISHNATEJATATA/Pokedex",
-    demoUrl: null,
     featured: false,
   },
 ];

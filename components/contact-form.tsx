@@ -205,7 +205,7 @@ export function ContactForm({ endpoint }: ContactFormProps) {
         {status === "error" && (
           <div
             role="alert"
-            className="rounded-lg border border-red-400/40 bg-red-400/10 p-4 text-sm text-red-300"
+            className="rounded-lg border border-danger/40 bg-danger/10 p-4 text-sm text-danger"
           >
             Something went wrong sending your message. Please try again, or{" "}
             <a

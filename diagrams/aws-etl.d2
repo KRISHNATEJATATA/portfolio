@@ -1,0 +1,48 @@
+# AWS ETL Pipeline — the topology the repo's code actually wires up.
+#
+# Source of truth: etl.py + process.txt in KRISHNATEJATATA/aws_etl. The code
+# provisions two private S3 buckets, uploads enterprise.csv via boto3, creates
+# a Glue service role (S3 full access + AWSGlueServiceRole), creates the Glue
+# database `etl-project`, then follows the documented console flow: crawler →
+# catalog → visual ETL job → query from Athena. Everything below is a service
+# the code demonstrably touches — nothing invented.
+#
+# Rendered twice by `npm run diagrams` (see scripts/render-diagrams.mjs):
+#   --theme=302 (Origami)            -> *.architecture.light.svg
+#   --theme=201 Dark Flagship Terrastruct -> *.architecture.dark.svg
+# Amber is pinned here and reserved for the raw → transform → curated path.
+
+direction: right
+
+csv: "enterprise.csv"
+s3src: "S3 source\ns3_etl_source (private)"
+crawler: "Glue crawler"
+catalog: "Glue Catalog\netl-project db"
+job: "Glue ETL job"
+s3tgt: "S3 target\ncurated"
+athena: "Athena"
+iam: "IAM role\nGlue · S3"
+
+ops: "*provisioned by etl.py (boto3);\ncrawl / job / query run from\nconsoles — no scheduler yet*" {shape: callout}
+
+# ---- Critical path (amber): ingest → transform → load ----------------------
+csv -> s3src: upload {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+catalog -> job {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+job -> s3tgt {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+
+# ---- Catalog wiring + permissions (theme neutrals) -------------------------
+s3src -> crawler: crawl {style.stroke-width: 2}
+crawler -> catalog {style.stroke-width: 2}
+iam -> crawler {style.stroke-width: 2}
+iam -> job {style.stroke-width: 2}
+catalog -> athena: query {style.stroke-width: 2}
+ops -> job {style.stroke-width: 2}

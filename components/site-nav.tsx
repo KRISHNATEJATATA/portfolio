@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GithubIcon, LinkedinIcon } from "@/components/brand-icons";
+import { ThemeToggle } from "@/components/chrome/theme-toggle";
 
 const GITHUB_URL = "https://github.com/KRISHNATEJATATA";
 const LINKEDIN_URL = "https://www.linkedin.com/in/venkata-krishna-teja/";
@@ -89,6 +90,9 @@ export function SiteNav() {
             >
               <LinkedinIcon size={18} aria-hidden="true" />
             </a>
+          </li>
+          <li>
+            <ThemeToggle />
           </li>
         </ul>
       </nav>

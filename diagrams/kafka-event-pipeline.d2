@@ -1,0 +1,56 @@
+# Kafka Event Pipeline — how one event travels from producer to processed sink.
+#
+# Source of truth: the project README (producer-side JSON-schema validation,
+# multi-stage consumer validation, batch offset commits, exponential-backoff
+# retries into a DLQ parked on the broker, Prometheus metrics on :8000/metrics,
+# correlation-ID tracing).
+#
+# Rendered twice by `npm run diagrams` (see scripts/render-diagrams.mjs):
+#   --theme=302 (Origami)                 -> *.architecture.light.svg
+#   --theme=201 (Dark Flagship Terrastruct) -> *.architecture.dark.svg
+# The render script strips d2's canvas rect and embedded fonts, so the SVGs
+# sit transparently on the site's own backgrounds in both themes. Amber is
+# pinned here and reserved for the critical path only.
+#
+# Legibility notes: labels are plain quoted strings with \n, never |md| —
+# d2 renders a markdown-only label as a borderless text-only shape whose
+# foreignObject clips when the browser's font metrics run wider than d2's
+# (which is exactly what happens after the render script strips the embedded
+# fonts). Same discipline as the other two diagrams: two-line labels, edge
+# labels only where the flow would otherwise be ambiguous, and the tracing
+# callout anchored upstream at the producer (where correlation IDs are
+# minted) instead of the crowded consumer corner. The broker is two flat
+# topic nodes rather than a container — the container plus the retry
+# back-edges routed every edge label through the DLQ text.
+
+direction: right
+
+producer: "Producer\nvalidates JSON schema"
+topics: "Kafka topics\nfile · user events"
+dlq: "DLQ topic\npoison messages"
+zookeeper: "Zookeeper"
+consumer: "Consumer\nvalidate · batch · offsets"
+processed: "Processed events"
+prometheus: "Prometheus\nscrapes :8000/metrics"
+tracing: "correlation ID\nend-to-end" {shape: callout}
+
+# ---- Critical path (amber): publish → consume → handle ---------------------
+producer -> topics: publish {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+topics -> consumer: poll batches {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+consumer -> processed: handle {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+
+# ---- Coordination + failure paths (theme neutrals) -------------------------
+topics <-> zookeeper {style.stroke-width: 2}
+consumer -> topics: retries ×3 {style.stroke-width: 2}
+consumer -> dlq: exhausted {style.stroke-width: 2}
+consumer -> prometheus {style.stroke-width: 2}
+tracing -> producer {style.stroke-width: 2}

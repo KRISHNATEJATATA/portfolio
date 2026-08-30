@@ -1,0 +1,86 @@
+# Scalable E-Commerce Backend — request flow and the async event bus around it.
+#
+# Source of truth: the repo's docs/architecture.md (FastAPI monolith-with-
+# replicas; strict Route → Schema → Service → Repository layering; Keycloak
+# OIDC RS256/JWKS token validation; Valkey for rate-limit/idempotency/cache-
+# aside; S3 presigned uploads; transactional outbox → relay (SKIP LOCKED) →
+# SNS/SQS with per-subscription DLQs; image / catalog-cache / reservation-
+# reaper workers).
+#
+# Rendered twice by `npm run diagrams` (see scripts/render-diagrams.mjs):
+#   --theme=302 (Origami)            -> *.architecture.light.svg
+#   --theme=201 Dark Flagship Terrastruct -> *.architecture.dark.svg
+# Amber is pinned here and reserved for the synchronous request path only.
+# Layout notes: ELK (v0.7) ignores nested `direction` and grids override the
+# board direction, so the composition leans on plain containers + same-rank
+# stacking — the layer chain reads left-to-right in order, stores and the
+# worker trio stack vertically. Labels are kept terse so the canvas stays
+# compact and the type stays legible when the SVG is scaled down.
+
+direction: right
+
+client: "HTTP Client"
+
+app: FastAPI app · all async {
+  mw: "Middleware\nrequest-id"
+  routes: "Routes"
+  schema: "Schemas · DTO"
+  auth: "Auth dep\nOIDC RS256/JWKS"
+  service: "Services"
+  repo: "Repositories"
+}
+
+pg: "PostgreSQL\n+ outbox"
+valkey: "Valkey\ncache · idem"
+s3: "S3"
+relay: "Relay\nSKIP LOCKED"
+bus: "SNS/SQS\nper-sub DLQ"
+imgw: "Image worker"
+cachew: "Cache worker"
+reaper: "Reaper"
+
+# ---- Critical path (amber): the synchronous request, in layer order --------
+client -> app.mw {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+app.mw -> app.routes {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+app.routes -> app.schema {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+app.schema -> app.service {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+app.service -> app.repo {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+app.repo -> pg: query {
+  style.stroke: "#d97706"
+  style.stroke-width: 3
+}
+
+# ---- Auth side door (stacks beside schemas) --------------------------------
+app.routes -> app.auth {style.stroke-width: 2}
+
+# ---- Cache + storage side doors --------------------------------------------
+app.mw -> valkey {style.stroke-width: 2}
+app.service -> valkey {style.stroke-width: 2}
+app.service -> s3 {style.stroke-width: 2}
+app.service -> pg: one txn {style.stroke-width: 2}
+
+# ---- Transactional outbox → bus → workers ----------------------------------
+relay -> pg: polls {style.stroke-width: 2}
+relay -> bus {style.stroke-width: 2}
+bus -> imgw {style.stroke-width: 2}
+bus -> cachew {style.stroke-width: 2}
+bus -> reaper {style.stroke-width: 2}
+s3 -> imgw {style.stroke-width: 2}
+imgw -> s3: writes {style.stroke-width: 2}
+cachew -> valkey: evict {style.stroke-width: 2}
+reaper -> pg {style.stroke-width: 2}

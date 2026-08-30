@@ -11,9 +11,21 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 /* ---------------------------------------------------------------------------
-   Design tokens — dark-only system.
-   background #0a0a0b · surface #131315 · line #232327
-   ink #f4f1ea · muted #a8a29e · accent #f59e0b (hover #fbbf24)
+   Design tokens — dark-first dual-theme system.
+   The dark palette is the brand origin and stays the SSR default
+   (<html data-theme="dark">); the light palette lives in the override block
+   directly below and is opt-in via the toggle (components/chrome/
+   theme-toggle.tsx).
+
+   Dark:  background #0a0a0b · surface #131315 · line #232327
+          ink #f4f1ea · muted #a8a29e · accent #f59e0b (hover #fbbf24)
+   Light: background #f7f5f0 · surface #efede6 · line #ddd9cf
+          ink #1c1b18 · muted #6f6a60 · accent #b45309 (hover #92400e)
+
+   --color-accent-contrast is the readable text color ON TOP of accent fills
+   (buttons, skip link, ::selection): near-black in dark mode, white in light
+   mode. Never use --color-background for that job again — it only reads as a
+   foreground by coincidence in one theme.
 --------------------------------------------------------------------------- */
 @theme {
   --color-background: #0a0a0b;
@@ -23,6 +35,12 @@
   --color-muted: #a8a29e;
   --color-accent: #f59e0b;
   --color-accent-strong: #fbbf24;
+  /* Text sitting on an accent fill. Dark value == the old background so the
+     pre-light-mode rendering is pixel-identical. */
+  --color-accent-contrast: #0a0a0b;
+  /* Error/danger states (field errors, form alert). Dark uses red-400, which
+     measures 7.15:1 on the near-black background. */
+  --color-danger: #f87171;
 
   /* Body base: 17px with generous leading; spacing scale stays 16px-rooted */
   --text-base: 1.0625rem;
@@ -39,6 +57,49 @@
     system-ui, sans-serif;
 }
 
+/* ---------------------------------------------------------------------------
+   LIGHT THEME — runtime token overrides.
+   Tailwind v4 utilities compile to var() references, so redefining these
+   custom properties on html[data-theme="light"] re-themes every utility
+   (bg-background, text-muted, border-line, ...) and every raw
+   var(--color-*) usage at once. The selector out-specifies @theme's :root
+   emission and comes later, so the override always wins without !important.
+
+   Palette rationale (all pairs measured, WCAG relative luminance):
+     - muted #6f6a60 on background #f7f5f0 .... 4.93:1 (AA body text)
+     - accent #b45309 as text on background ... 4.61:1 (AA .link text)
+     - accent-contrast #ffffff on accent ...... 5.02:1 (AA btn-primary)
+     - ink #1c1b18 on background .............. 15.81:1 (AAA)
+     - danger #b91c1c on background ........... 5.94:1 (AA; red-600 was
+       measured at 4.43:1 — one shade short — so dark-mode's red-600
+       equivalent steps down to red-700 here per the ±one-shade allowance)
+
+   The warm paper tone (#f7f5f0 family) keeps the site's amber brand accent
+   feeling deliberate instead of pasted onto clinical white.
+--------------------------------------------------------------------------- */
+:root {
+  /* Film-grain strength (see .grain-overlay below). Overlay blending reads
+     much stronger against light backgrounds, so the light theme dials it
+     down to keep the texture felt rather than seen. */
+  --grain-opacity: 0.035;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --color-background: #f7f5f0;
+  --color-surface: #efede6;
+  --color-line: #ddd9cf;
+  --color-ink: #1c1b18;
+  --color-muted: #6f6a60;
+  --color-accent: #b45309;
+  --color-accent-strong: #92400e;
+  --color-accent-contrast: #ffffff;
+  --color-danger: #b91c1c;
+
+  --grain-opacity: 0.02;
+}
+
 @layer base {
   /* Minimal reset (preflight stand-in, scoped to what this site uses) */
   *,
@@ -51,6 +112,9 @@
   }
 
   html {
+    /* Dark is the SSR default (<html data-theme="dark">); the light theme
+       block above flips this to `light` so form controls, scrollbars and
+       native widgets match the active palette. */
     color-scheme: dark;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
@@ -107,7 +171,9 @@
 
   ::selection {
     background-color: var(--color-accent);
-    color: var(--color-background);
+    /* Foreground on an accent fill: use the dedicated contrast token, not
+       --color-background (which only coincidentally reads on dark). */
+    color: var(--color-accent-contrast);
   }
 
   :focus-visible {
@@ -187,7 +253,8 @@
 
   .btn-primary {
     background-color: var(--color-accent);
-    color: var(--color-background);
+    /* White in light mode / near-black in dark mode — see --color-accent-contrast */
+    color: var(--color-accent-contrast);
   }
 
   .btn-primary:hover {
@@ -229,7 +296,7 @@
     padding-inline: 1.5rem;
     border-radius: 9999px;
     background-color: var(--color-accent);
-    color: var(--color-background);
+    color: var(--color-accent-contrast);
     font-size: 0.9375rem;
     font-weight: 500;
     transform: translateY(-200%);
@@ -278,7 +345,10 @@
   .field-error {
     margin-top: 0.5rem;
     font-size: 0.8125rem;
-    color: var(--color-red-400);
+    /* Per-theme danger token (dark red-400 7.15:1 / light red-700 5.94:1) —
+       both clear WCAG AA, unlike a fixed Tailwind red which only worked on
+       the dark background. */
+    color: var(--color-danger);
   }
 }
 
@@ -342,19 +412,21 @@ html.lenis body {
 /* ---------------------------------------------------------------------------
    SITE CHROME MOTION LAYER
    z-scale: content (auto/0) < grain 30 < nav 50 < skip-link 60
-            < preloader 70 < cursor 80
+            < preloader 70 < lightbox 75 < cursor 80
    Every animated property across these layers is transform/opacity only.
 --------------------------------------------------------------------------- */
 
 /* --- Film grain (components/chrome/grain-overlay.tsx) -------------------
-   Static SVG feTurbulence tile, ~3.5% opacity, overlay-blended. No JS, no
-   animation, pointer-events none. Sits above page content, below nav. */
+   Static SVG feTurbulence tile, overlay-blended at --grain-opacity
+   (0.035 dark / 0.02 light — overlay reads stronger on light backgrounds,
+   see the light-theme token block). No JS, no animation, pointer-events
+   none. Sits above page content, below nav. */
 .grain-overlay {
   position: fixed;
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: var(--grain-opacity);
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   background-size: 160px 160px;
@@ -436,6 +508,14 @@ html[data-intro-skip] .preloader {
   flex-direction: column;
   align-items: center;
   gap: 1.25rem;
+}
+
+/* Pre-hydration hidden state for the brand mark — matches the GSAP `set()`
+   values in preloader.tsx so the name does not flash at full opacity before
+   GSAP's effect runs and animates it in. */
+.preloader-mark {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
 }
 
 .preloader-line {

@@ -1,0 +1,9 @@
+# Handle text files automatically and normalize them to LF on check-in
+* text=auto
+
+# Force LF line endings on checkout for all text files
+* eol=lf
+
+# Alternatively, target specific extensions if you want strict control:
+# *.js text eol=lf
+# *.py text eol=lf

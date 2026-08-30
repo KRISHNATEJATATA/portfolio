@@ -43,14 +43,10 @@ export const skillGroups: SkillGroup[] = [
   },
   {
     domain: "Cloud & DevOps",
-    items: ["AWS", "Docker", "Terraform", "GitHub Actions", "ArgoCD / GitOps"],
+    items: ["AWS", "Docker", "GitHub Actions"],
   },
   {
     domain: "Observability & Quality",
     items: ["OpenTelemetry", "Prometheus", "pytest + testcontainers"],
-  },
-  {
-    domain: "Web & Experiments",
-    items: ["React", "Next.js", "Tailwind CSS", "Generative AI / LLMs"],
   },
 ];

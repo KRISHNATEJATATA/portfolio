@@ -5,6 +5,7 @@ import { KineticHero } from "@/components/kinetic-hero";
 import { ContactForm } from "@/components/contact-form";
 import { SkillsSection } from "@/components/skills-section";
 import { ExperienceSection } from "@/components/experience-section";
+import { EducationSection } from "@/components/education-section";
 import { getFeaturedProjects } from "@/lib/projects";
 
 const EMAIL = "tejakrishnatata@gmail.com";
@@ -96,6 +97,9 @@ export default function HomePage() {
       {/* Experience — renders nothing until roles exist in lib/experience.ts
           (closes docs/portfolio-gap-report.md item 5). */}
       <ExperienceSection />
+
+      {/* Education — sourced from docs/resume.md, data in lib/education.ts. */}
+      <EducationSection />
 
       {/* Featured projects */}
       <section
