@@ -27,8 +27,9 @@ import gsap from "gsap";
  * is hidden by CSS before any content after it paints. The noscript block in
  * app/layout.tsx hides it when scripting is unavailable entirely.
  *
- * Timing budget: rise-in 0.45s ∥ progress line 0.85s -> hold -> exit wipe
- * 0.42s. Total ≈ 1.42s, under the 1.5s cap.
+ * Timing budget: progress line 0.85s -> exit wipe 0.42s. Total ≈ 1.27s,
+ * under the 1.5s cap. The brand name renders immediately (no fade-in) so it
+ * is visible from the first paint even before GSAP has hydrated.
  */
 
 const SEEN_KEY = "kt-intro-seen";
@@ -87,9 +88,8 @@ export function Preloader() {
       return;
     }
 
-    const mark = rootRef.current?.querySelector<HTMLElement>(".preloader-mark");
     const fill = rootRef.current?.querySelector<HTMLElement>(".preloader-fill");
-    if (!rootRef.current || !mark || !fill) {
+    if (!rootRef.current || !fill) {
       // Markup missing (should not happen): fail open — release the hero on
       // the next frame so the state flip never cascades mid-effect.
       const raf = requestAnimationFrame(() => {
@@ -100,7 +100,6 @@ export function Preloader() {
     }
 
     const ctx = gsap.context(() => {
-      gsap.set(mark, { opacity: 0, y: 10 });
       gsap.set(fill, { scaleX: 0 });
 
       const tl = gsap.timeline({
@@ -110,11 +109,10 @@ export function Preloader() {
         },
       });
 
-      tl.to(mark, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" })
-        .to(
+      tl.to(
           fill,
           { scaleX: 1, duration: 0.85, ease: "power2.inOut" },
-          0.15,
+          0,
         )
         // Persist the flag BEFORE the wipe so a refresh mid-exit still
         // counts as seen and never replays the intro this session.
@@ -125,7 +123,7 @@ export function Preloader() {
             /* private mode: intro simply replays next load */
           }
         })
-        .to(rootRef.current, { yPercent: -100, duration: 0.42, ease: "power4.inOut" }, 1.0);
+        .to(rootRef.current, { yPercent: -100, duration: 0.42, ease: "power4.inOut" }, 0.85);
     });
 
     // Skippable: click or any keypress (incl. Esc) dismisses instantly.
