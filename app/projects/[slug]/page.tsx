@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons";
 import { ProjectMedia } from "@/components/project-media";
 import { Reveal } from "@/components/reveal";
@@ -173,6 +173,44 @@ export default async function ProjectPage({
                   </li>
                 ),
               )}
+            </ul>
+          </section>
+        </Reveal>
+      )}
+
+      {project.diagrams && project.diagrams.length > 0 && (
+        <Reveal delay={300}>
+          <section className="border-t border-line py-10">
+            <h2 className="font-display text-xl font-semibold tracking-display text-ink">
+              Interactive diagrams
+            </h2>
+            <p className="mt-3 max-w-[65ch] text-lg text-muted">
+              Standalone viewers with pan, zoom, search, guided views, and
+              dark/light themes. Each opens in a new tab.
+            </p>
+            <ul className="mt-8 grid gap-6 sm:grid-cols-2">
+              {project.diagrams.map((diagram) => (
+                <li key={diagram.href}>
+                  <a
+                    href={diagram.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex h-full flex-col gap-2 rounded-xl border border-line bg-background p-6 transition-colors hover:border-accent/50"
+                  >
+                    <span className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
+                      {diagram.title}
+                      <ExternalLink
+                        size={16}
+                        aria-hidden="true"
+                        className="text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                      />
+                    </span>
+                    <span className="text-base text-muted">
+                      {diagram.description}
+                    </span>
+                  </a>
+                </li>
+              ))}
             </ul>
           </section>
         </Reveal>

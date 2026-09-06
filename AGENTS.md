@@ -10,14 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Browser automation (agent-browser)
 
-Always give `agent-browser` commands a hard 2-minute cap (120000 ms) — the tool-call
-timeout alone is not enough; wrap each command so it is killed at 120 s even if the
-daemon hangs on first launch or a stuck tab:
-
-```powershell
-$job = Start-Job { agent-browser <args> };   # substitute real args
-if (Wait-Job $job -Timeout 120) { Receive-Job $job } else { Stop-Job $job; "TIMED OUT after 120s" }
-Remove-Job $job -Force
+if you want to use the browser automation agent, use either a headless browser either chrome or edge.
 ```
 
 If a command times out, recover with `agent-browser doctor --offline --quick` and/or
